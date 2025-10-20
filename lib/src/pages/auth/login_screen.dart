@@ -32,6 +32,7 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  // --- UPDATED _login Function ---
   Future<void> _login() async {
     if (!mounted || !_formKey.currentState!.validate()) {
       return;
@@ -41,6 +42,9 @@ class _LoginScreenState extends State<LoginScreen> {
       _isLoading = true;
     });
 
+    // Default error message
+    String errorMessage = 'An unknown error occurred. Please try again.';
+
     try {
       String identifier = _identifierController.text.trim();
       String password = _passwordController.text.trim();
@@ -49,8 +53,12 @@ class _LoginScreenState extends State<LoginScreen> {
       // Check if identifier looks like an email
       if (identifier.contains('@')) {
         email = identifier;
+        debugPrint('Identifier is an email: $email'); // Log email
       } else {
         // Assume it's a username, query Firestore
+        debugPrint(
+          'Identifier is a username: $identifier. Querying Firestore...',
+        ); // Log username
         final userQuery = await FirebaseFirestore.instance
             .collection('users')
             .where('username', isEqualTo: identifier)
@@ -60,12 +68,29 @@ class _LoginScreenState extends State<LoginScreen> {
         if (!mounted) return;
 
         if (userQuery.docs.isNotEmpty) {
-          email = userQuery.docs.first.data()['email'] as String?;
+          final data = userQuery.docs.first.data();
+          if (data.containsKey('email') && data['email'] is String) {
+            email = data['email'] as String?;
+            debugPrint(
+              'Found email for username $identifier: $email',
+            ); // Log found email
+          } else {
+            debugPrint(
+              'Error: Email field missing or not a string for username $identifier',
+            );
+          }
+        } else {
+          debugPrint(
+            'No user found in Firestore for username: $identifier',
+          ); // Log if not found
         }
       }
 
       if (email == null) {
         // Throw an error if no email could be determined
+        debugPrint(
+          'Email is null after lookup for identifier: $identifier',
+        ); // Log null email
         throw FirebaseAuthException(
           code: 'user-not-found',
           message: 'No user found for that username or email.',
@@ -73,41 +98,70 @@ class _LoginScreenState extends State<LoginScreen> {
       }
 
       // Attempt sign-in with the determined email
+      debugPrint(
+        'Attempting sign-in with email: $email',
+      ); // Log sign-in attempt
       await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
 
-      if (!mounted) return;
-
-      // Navigate to Dashboard on successful login
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (ctx) => const DashboardScreen()),
-        (route) => false, // Remove all previous routes
-      );
+      // --- Navigate on Success ---
+      if (mounted) {
+        debugPrint(
+          'Sign-in successful for email: $email. Navigating to dashboard.',
+        ); // Log success
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (ctx) => const DashboardScreen()),
+          (route) => false, // Remove all previous routes
+        );
+      }
+      // Explicitly return here on success before finally block
+      return;
     } on FirebaseAuthException catch (e) {
-      String message = 'An error occurred. Please try again.';
-      // Provide a clearer message for common login errors
+      // --- Handle Specific Firebase Auth Errors ---
+      debugPrint(
+        'FirebaseAuthException: ${e.code} - ${e.message}',
+      ); // Log the specific error code
       if (e.code == 'user-not-found' ||
           e.code == 'wrong-password' ||
           e.code == 'invalid-credential') {
-        message = 'Incorrect username, email, or password.';
+        // Consolidated error message
+        errorMessage = 'Incorrect username, email, or password.';
+      } else if (e.code == 'invalid-email') {
+        errorMessage = 'The email address format is not valid.';
+      } else if (e.code == 'user-disabled') {
+        errorMessage = 'This user account has been disabled.';
+      } else {
+        errorMessage =
+            'Authentication error: ${e.message ?? e.code}'; // Show specific Auth error message
       }
-
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), backgroundColor: AppColors.error),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('An unknown error occurred.'),
-          backgroundColor: AppColors.error,
-        ),
-      );
+    } on FirebaseException catch (e) {
+      // --- Handle Potential Firestore or other Firebase Errors during lookup ---
+      debugPrint(
+        'FirebaseException during login (likely Firestore): ${e.code} - ${e.message}',
+      ); // Log the specific error code
+      errorMessage =
+          'Database error: ${e.message ?? e.code}. Check Firestore rules or connectivity.'; // Show specific Firebase error message
+    } catch (e, stackTrace) {
+      // --- Catch ANY other unexpected errors ---
+      debugPrint('Unexpected Error during login: $e');
+      debugPrint('Stack Trace: $stackTrace'); // Log stack trace for debugging
+      errorMessage = 'An unexpected error occurred. Please try again later.';
     } finally {
+      // --- This always runs, whether try succeeded or failed ---
       if (mounted) {
+        // Check if we are still on the Login screen (meaning login failed)
+        if (ModalRoute.of(context)?.isCurrent ?? false) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(errorMessage),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+
+        // Always turn off loading indicator
         setState(() {
           _isLoading = false;
         });

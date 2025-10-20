@@ -44,54 +44,90 @@ class _RegisterScreenState extends State<RegisterScreen> {
       _isLoading = true;
     });
 
+    // --- Default error message ---
+    String errorMessage = 'An unknown error occurred. Please try again.';
+
     try {
+      // --- Step 1: Create User ---
       UserCredential userCredential = await FirebaseAuth.instance
           .createUserWithEmailAndPassword(
             email: _emailController.text.trim(),
             password: _passwordController.text.trim(),
           );
 
+      // --- Step 2: Save User Data to Firestore ---
       await FirebaseFirestore.instance
           .collection('users')
           .doc(userCredential.user!.uid)
           .set({
             'username': _usernameController.text.trim(),
             'email': _emailController.text.trim(),
+            // Optional: Add createdAt timestamp
+            'createdAt': Timestamp.now(),
           });
 
+      // --- Step 3: Navigate on Success ---
       if (mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (ctx) => const LoginScreen()),
         );
       }
+      // Explicitly return here on success before finally block
+      return;
     } on FirebaseAuthException catch (e) {
-      String message = 'An error occurred. Please check your details.';
+      // --- Handle Specific Firebase Auth Errors ---
+      debugPrint(
+        'FirebaseAuthException: ${e.code} - ${e.message}',
+      ); // Log the specific error code
       if (e.code == 'weak-password') {
-        message = 'The password provided is too weak.';
+        errorMessage = 'The password provided is too weak.';
       } else if (e.code == 'email-already-in-use') {
-        message = 'An account already exists for that email.';
+        errorMessage = 'An account already exists for that email.';
+      } else if (e.code == 'invalid-email') {
+        errorMessage = 'The email address is not valid.';
+      } else if (e.code == 'operation-not-allowed') {
+        errorMessage =
+            'Email/password accounts are not enabled.'; // Check Firebase Console
+      } else {
+        errorMessage =
+            'Authentication error: ${e.message ?? e.code}'; // Show specific Auth error message
       }
-
+    } on FirebaseException catch (e) {
+      // --- Handle Potential Firestore or other Firebase Errors ---
+      debugPrint(
+        'FirebaseException: ${e.code} - ${e.message}',
+      ); // Log the specific error code
+      errorMessage =
+          'Database error: ${e.message ?? e.code}'; // Show specific Firebase error message
+      // You might want specific messages for Firestore permission errors if needed
+    } catch (e, stackTrace) {
+      // --- Catch ANY other unexpected errors ---
+      debugPrint('Unexpected Error: $e');
+      debugPrint('Stack Trace: $stackTrace'); // Log stack trace for debugging
+      errorMessage = 'An unexpected error occurred. Please try again later.';
+    } finally {
+      // --- This always runs, whether try succeeded or failed ---
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message), backgroundColor: AppColors.error),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('An unknown error occurred.'),
-            backgroundColor: AppColors.error,
-          ),
-        );
-      }
-    }
+        // Only show Snackbar if there was an error message set (i.e., not successful signup)
+        // Check if errorMessage is still the default (or changed)
+        // A better way: Check if signup was successful before showing error.
+        // We handle navigation on success inside try, so if we reach finally
+        // without navigating, it means an error occurred.
+        // Check if we are still on this screen
+        if (ModalRoute.of(context)?.isCurrent ?? false) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(errorMessage),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
 
-    if (mounted) {
-      setState(() {
-        _isLoading = false;
-      });
+        // Always turn off loading indicator
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
