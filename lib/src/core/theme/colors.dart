@@ -7,33 +7,36 @@ class AppColors {
 
   // --- Light Theme ---
 
-  /// Screen background in light theme
-  static const Color background_light = Color(0xFFF5F5F5);
+  /// Screen background in light theme (Light Bg Main)
+  static const Color background_light = Color(0xFF896C6C);
 
-  /// Default text color in light theme
-  static const Color text_light = Color(0xFFFFF59D);
+  /// Default text color in light theme (Light Foreground)
+  static const Color text_light = Color(0xFFF5FAE1);
 
-  /// Default icon color in light theme
-  static const Color icon_light = Color(0xFFA5D6A7);
+  /// Default icon color in light theme (Light Surface)
+  static const Color icon_light = Color(0xFFEEE6CA);
 
-  /// Extra light theme color (from --light-sky-blue)
-  static const Color lightSkyBlue = Color(0xFF90CAF9);
+  /// Secondary text color in light theme (Light Text On Surface, Muted Foreground)
+  static const Color textSecondary_light = Color(0xFF896C6C);
+
+  /// Extra light theme color (Light Accent)
+  static const Color lightSkyBlue = Color(0xFFE5BEB5);
 
   // --- Dark Theme ---
 
-  /// Screen background in dark theme
+  /// Screen background in dark theme (Night)
   static const Color background_dark = Color(0xFF0F0F0F);
 
-  /// Default text color in dark theme
+  /// Default text color in dark theme (Amber)
   static const Color text_dark = Color(0xFFFBC02D);
 
-  /// Default icon color in dark theme
+  /// Default icon color in dark theme (Dartmouth Green)
   static const Color icon_dark = Color(0xFF166534);
 
-  /// Extra dark theme color (from --marian-blue)
+  /// Extra dark theme color (Marian Blue)
   static const Color marianBlue = Color(0xFF1E3A8A);
 
-  // --- Common Colors (for reference) ---
+  // --- Common Colors ---
   static const Color white = Color(0xFFFFFFFF);
   static const Color black = Color(0xFF000000);
   static const Color error = Color(0xFFB00020);
