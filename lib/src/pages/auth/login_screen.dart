@@ -5,8 +5,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 // Corrected import paths for your project structure
-import 'package:suzy/src/pages/auth/register_screen.dart'; // Changed from SignupScreen
-import 'package:suzy/src/pages/dashboard/dashboard_screen.dart'; // Assuming dashboard exists
+import 'package:suzy/src/pages/auth/register_screen.dart';
+import 'package:suzy/src/pages/dashboard/dashboard_screen.dart';
 import 'package:suzy/src/core/theme/colors.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -32,7 +32,7 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  // --- UPDATED _login Function ---
+  // --- _login Function (unchanged logic) ---
   Future<void> _login() async {
     if (!mounted || !_formKey.currentState!.validate()) {
       return;
@@ -42,7 +42,6 @@ class _LoginScreenState extends State<LoginScreen> {
       _isLoading = true;
     });
 
-    // Default error message
     String errorMessage = 'An unknown error occurred. Please try again.';
 
     try {
@@ -50,15 +49,13 @@ class _LoginScreenState extends State<LoginScreen> {
       String password = _passwordController.text.trim();
       String? email;
 
-      // Check if identifier looks like an email
       if (identifier.contains('@')) {
         email = identifier;
-        debugPrint('Identifier is an email: $email'); // Log email
+        debugPrint('Identifier is an email: $email');
       } else {
-        // Assume it's a username, query Firestore
         debugPrint(
           'Identifier is a username: $identifier. Querying Firestore...',
-        ); // Log username
+        );
         final userQuery = await FirebaseFirestore.instance
             .collection('users')
             .where('username', isEqualTo: identifier)
@@ -71,87 +68,64 @@ class _LoginScreenState extends State<LoginScreen> {
           final data = userQuery.docs.first.data();
           if (data.containsKey('email') && data['email'] is String) {
             email = data['email'] as String?;
-            debugPrint(
-              'Found email for username $identifier: $email',
-            ); // Log found email
+            debugPrint('Found email for username $identifier: $email');
           } else {
             debugPrint(
               'Error: Email field missing or not a string for username $identifier',
             );
           }
         } else {
-          debugPrint(
-            'No user found in Firestore for username: $identifier',
-          ); // Log if not found
+          debugPrint('No user found in Firestore for username: $identifier');
         }
       }
 
       if (email == null) {
-        // Throw an error if no email could be determined
-        debugPrint(
-          'Email is null after lookup for identifier: $identifier',
-        ); // Log null email
+        debugPrint('Email is null after lookup for identifier: $identifier');
         throw FirebaseAuthException(
           code: 'user-not-found',
           message: 'No user found for that username or email.',
         );
       }
 
-      // Attempt sign-in with the determined email
-      debugPrint(
-        'Attempting sign-in with email: $email',
-      ); // Log sign-in attempt
+      debugPrint('Attempting sign-in with email: $email');
       await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
 
-      // --- Navigate on Success ---
       if (mounted) {
         debugPrint(
           'Sign-in successful for email: $email. Navigating to dashboard.',
-        ); // Log success
+        );
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (ctx) => const DashboardScreen()),
-          (route) => false, // Remove all previous routes
+          (route) => false,
         );
       }
-      // Explicitly return here on success before finally block
       return;
     } on FirebaseAuthException catch (e) {
-      // --- Handle Specific Firebase Auth Errors ---
-      debugPrint(
-        'FirebaseAuthException: ${e.code} - ${e.message}',
-      ); // Log the specific error code
+      debugPrint('FirebaseAuthException: ${e.code} - ${e.message}');
       if (e.code == 'user-not-found' ||
           e.code == 'wrong-password' ||
           e.code == 'invalid-credential') {
-        // Consolidated error message
         errorMessage = 'Incorrect username, email, or password.';
       } else if (e.code == 'invalid-email') {
         errorMessage = 'The email address format is not valid.';
       } else if (e.code == 'user-disabled') {
         errorMessage = 'This user account has been disabled.';
       } else {
-        errorMessage =
-            'Authentication error: ${e.message ?? e.code}'; // Show specific Auth error message
+        errorMessage = 'Authentication error: ${e.message ?? e.code}';
       }
     } on FirebaseException catch (e) {
-      // --- Handle Potential Firestore or other Firebase Errors during lookup ---
-      debugPrint(
-        'FirebaseException during login (likely Firestore): ${e.code} - ${e.message}',
-      ); // Log the specific error code
+      debugPrint('FirebaseException during login: ${e.code} - ${e.message}');
       errorMessage =
-          'Database error: ${e.message ?? e.code}. Check Firestore rules or connectivity.'; // Show specific Firebase error message
+          'Database error: ${e.message ?? e.code}. Check Firestore rules or connectivity.';
     } catch (e, stackTrace) {
-      // --- Catch ANY other unexpected errors ---
       debugPrint('Unexpected Error during login: $e');
-      debugPrint('Stack Trace: $stackTrace'); // Log stack trace for debugging
-      errorMessage = 'An unexpected error occurred. Please try again later.';
+      debugPrint('Stack Trace: $stackTrace');
+      errorMessage = 'An unexpected error occurred. Please try.again later.';
     } finally {
-      // --- This always runs, whether try succeeded or failed ---
       if (mounted) {
-        // Check if we are still on the Login screen (meaning login failed)
         if (ModalRoute.of(context)?.isCurrent ?? false) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -160,8 +134,6 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           );
         }
-
-        // Always turn off loading indicator
         setState(() {
           _isLoading = false;
         });
@@ -177,7 +149,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // --- UPDATED: Get all colors and styles from the theme ---
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
     final colorScheme = theme.colorScheme;
@@ -230,21 +201,77 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  // -----------------------------------------------------------------
+  // RESPONSIVE FIELD WIDTH HELPERS
+  // -----------------------------------------------------------------
+  double _fieldWidth(BuildContext context, {bool isMobile = false}) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    return (isMobile || screenWidth < 600) ? double.infinity : 380.0;
+  }
+
+  Widget _responsiveField({
+    required BuildContext context,
+    required Widget child,
+    bool isMobile = false,
+  }) {
+    final width = _fieldWidth(context, isMobile: isMobile);
+    return width == double.infinity
+        ? child
+        : SizedBox(width: width, child: child);
+  }
+
+  // -----------------------------------------------------------------
+  // CENTERING HELPERS (Desktop Only)
+  // -----------------------------------------------------------------
+  Widget _buildCenteredField({
+    required bool shouldCenter,
+    required Widget child,
+  }) {
+    return shouldCenter ? Center(child: child) : child;
+  }
+
+  Widget _buildHeader(
+    TextTheme textTheme,
+    ColorScheme colorScheme,
+    Color mainTextColor,
+  ) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _AnimatedHeartIcon(
+          isLiked: _isLiked,
+          onTap: _toggleLike,
+          size: 32,
+          defaultColor: colorScheme.primary,
+          likedColor: AppColors.error,
+        ),
+        const SizedBox(width: 12),
+        Text(
+          "Suzy",
+          style: textTheme.headlineMedium?.copyWith(color: mainTextColor),
+        ),
+      ],
+    );
+  }
+
+  // -----------------------------------------------------------------
+  // FORM SECTION (Centered on Desktop)
+  // -----------------------------------------------------------------
   Widget _buildFormSection({
     required TextTheme textTheme,
     required ColorScheme colorScheme,
     required bool isDarkMode,
     bool isMobile = false,
   }) {
-    // Use secondary text color from your theme for muted text
     final Color mutedTextColor = isDarkMode
-        ? AppColors.white.withAlpha(179) // 70% white for dark mode
-        : AppColors.textSecondary_light; // Your specific light secondary color
+        ? AppColors.white.withAlpha(179)
+        : AppColors.textSecondary_light;
 
-    // Define the main text color explicitly
     final Color mainTextColor = isDarkMode
         ? AppColors.text_dark
         : AppColors.text_light;
+
+    final bool shouldCenterFields = !isMobile;
 
     return Container(
       constraints: const BoxConstraints(maxWidth: 550),
@@ -253,136 +280,178 @@ class _LoginScreenState extends State<LoginScreen> {
         key: _formKey,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(
-              children: [
-                _AnimatedHeartIcon(
-                  isLiked: _isLiked,
-                  onTap: _toggleLike,
-                  size: 32,
-                  defaultColor: colorScheme.primary,
-                  likedColor: AppColors.error,
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  "Suzy",
-                  style: textTheme.headlineMedium?.copyWith(
-                    color: mainTextColor,
-                  ),
-                ),
-              ],
+            // Logo + App Name
+            _buildCenteredField(
+              shouldCenter: shouldCenterFields,
+              child: _buildHeader(textTheme, colorScheme, mainTextColor),
             ),
             SizedBox(height: isMobile ? 16 : 32),
-            Text(
-              "Welcome Back!",
-              style:
-                  (isMobile
-                          ? textTheme.headlineMedium
-                          : textTheme.headlineLarge)
-                      ?.copyWith(color: mainTextColor),
+
+            // Title
+            _buildCenteredField(
+              shouldCenter: shouldCenterFields,
+              child: Text(
+                "Welcome Back!",
+                style:
+                    (isMobile
+                            ? textTheme.headlineMedium
+                            : textTheme.headlineLarge)
+                        ?.copyWith(color: mainTextColor),
+                textAlign: shouldCenterFields
+                    ? TextAlign.center
+                    : TextAlign.start,
+              ),
             ),
             const SizedBox(height: 8),
-            Text(
-              "Login to continue your aesthetic study journey.",
-              style: textTheme.bodyLarge?.copyWith(
-                color: isDarkMode ? mutedTextColor : mainTextColor,
+
+            // Subtitle
+            _buildCenteredField(
+              shouldCenter: shouldCenterFields,
+              child: Text(
+                "Login to continue your aesthetic study journey.",
+                style: textTheme.bodyLarge?.copyWith(
+                  color: isDarkMode ? mutedTextColor : mainTextColor,
+                ),
+                textAlign: shouldCenterFields
+                    ? TextAlign.center
+                    : TextAlign.start,
               ),
             ),
             const SizedBox(height: 32),
-            _buildTextFormField(
-              controller: _identifierController,
-              labelText: 'Email or Username',
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Please enter your email or username.';
-                }
-                return null;
-              },
-              textTheme: textTheme,
-              colorScheme: colorScheme,
-              mutedTextColor: mutedTextColor,
-              isDarkMode: isDarkMode,
-            ),
-            const SizedBox(height: 24),
-            _buildTextFormField(
-              controller: _passwordController,
-              labelText: 'Password',
-              obscureText: !_isPasswordVisible,
-              suffixIcon: IconButton(
-                icon: Icon(
-                  _isPasswordVisible ? Icons.visibility_off : Icons.visibility,
-                  color: mutedTextColor,
+
+            // Identifier Field
+            _buildCenteredField(
+              shouldCenter: shouldCenterFields,
+              child: _responsiveField(
+                context: context,
+                isMobile: isMobile,
+                child: _buildTextFormField(
+                  controller: _identifierController,
+                  labelText: 'Email or Username',
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Please enter your email or username.';
+                    }
+                    return null;
+                  },
+                  textTheme: textTheme,
+                  colorScheme: colorScheme,
+                  mutedTextColor: mutedTextColor,
+                  isDarkMode: isDarkMode,
                 ),
-                onPressed: () =>
-                    setState(() => _isPasswordVisible = !_isPasswordVisible),
-              ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Please enter your password.';
-                }
-                return null;
-              },
-              textTheme: textTheme,
-              colorScheme: colorScheme,
-              mutedTextColor: mutedTextColor,
-              isDarkMode: isDarkMode,
-            ),
-            const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _login,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: colorScheme.secondary,
-                  foregroundColor: colorScheme.onSecondary,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: _isLoading
-                    ? SizedBox(
-                        height: 24,
-                        width: 24,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            isDarkMode ? AppColors.black : AppColors.white,
-                          ),
-                        ),
-                      )
-                    : Text(
-                        'Login',
-                        style: textTheme.labelLarge?.copyWith(
-                          color: colorScheme.onSecondary,
-                        ),
-                      ),
               ),
             ),
             const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  "Don't have an account?",
-                  style: textTheme.bodyMedium?.copyWith(
-                    color: isDarkMode ? mutedTextColor : mainTextColor,
-                  ),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(builder: (ctx) => const RegisterScreen()),
-                  ),
-                  child: Text(
-                    'Sign Up', // Changed from 'Login here'
-                    style: textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.primary,
-                      fontWeight: FontWeight.bold,
+
+            // Password Field
+            _buildCenteredField(
+              shouldCenter: shouldCenterFields,
+              child: _responsiveField(
+                context: context,
+                isMobile: isMobile,
+                child: _buildTextFormField(
+                  controller: _passwordController,
+                  labelText: 'Password',
+                  obscureText: !_isPasswordVisible,
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _isPasswordVisible
+                          ? Icons.visibility_off
+                          : Icons.visibility,
+                      color: mutedTextColor,
+                    ),
+                    onPressed: () => setState(
+                      () => _isPasswordVisible = !_isPasswordVisible,
                     ),
                   ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Please enter your password.';
+                    }
+                    return null;
+                  },
+                  textTheme: textTheme,
+                  colorScheme: colorScheme,
+                  mutedTextColor: mutedTextColor,
+                  isDarkMode: isDarkMode,
                 ),
-              ],
+              ),
+            ),
+            const SizedBox(height: 32),
+
+            // Login Button
+            _buildCenteredField(
+              shouldCenter: shouldCenterFields,
+              child: _responsiveField(
+                context: context,
+                isMobile: isMobile,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _login,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: colorScheme.secondary,
+                    foregroundColor: colorScheme.onSecondary,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: _isLoading
+                      ? SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              isDarkMode ? AppColors.black : AppColors.white,
+                            ),
+                          ),
+                        )
+                      : Text(
+                          'Login',
+                          style: textTheme.labelLarge?.copyWith(
+                            color: colorScheme.onSecondary,
+                          ),
+                        ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Sign Up Link
+            _buildCenteredField(
+              shouldCenter: shouldCenterFields,
+              child: Row(
+                mainAxisSize: shouldCenterFields
+                    ? MainAxisSize.min
+                    : MainAxisSize.max,
+                mainAxisAlignment: shouldCenterFields
+                    ? MainAxisAlignment.center
+                    : MainAxisAlignment.center,
+                children: [
+                  Text(
+                    "Don't have an account?",
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: isDarkMode ? mutedTextColor : mainTextColor,
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(
+                        builder: (ctx) => const RegisterScreen(),
+                      ),
+                    ),
+                    child: Text(
+                      'Sign Up',
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -390,6 +459,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  // --- TextFormField Builder ---
   TextFormField _buildTextFormField({
     required TextEditingController controller,
     required String labelText,
@@ -436,6 +506,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  // --- Illustration Section ---
   Widget _buildIllustrationSection({
     required ColorScheme colorScheme,
     bool isMobile = false,
@@ -493,7 +564,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
-// Reusable Heart Icon Widget (Keep this or import if you moved it)
+// Reusable Animated Heart Icon
 class _AnimatedHeartIcon extends StatelessWidget {
   final bool isLiked;
   final VoidCallback onTap;

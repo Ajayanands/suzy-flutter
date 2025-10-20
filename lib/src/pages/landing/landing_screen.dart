@@ -1,30 +1,25 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart'; // 1. Import Riverpod
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_flutter/lucide_flutter.dart';
 import 'package:suzy/src/pages/auth/login_screen.dart';
 import 'package:suzy/src/pages/auth/register_screen.dart';
 import 'package:suzy/src/core/theme/colors.dart';
-import 'package:suzy/src/core/theme/theme_provider.dart'; // 2. Import your new provider
+import 'package:suzy/src/core/theme/theme_provider.dart';
 
-// 3. Change to 'ConsumerStatefulWidget'
 class LandingScreen extends ConsumerStatefulWidget {
   const LandingScreen({super.key});
 
   @override
-  // 4. Change to 'ConsumerState'
   ConsumerState<LandingScreen> createState() => _LandingScreenState();
 }
 
-// 5. Change to 'ConsumerState'
 class _LandingScreenState extends ConsumerState<LandingScreen> {
   bool _isHeaderHeartLiked = false;
   bool _isFooterHeartLiked = false;
 
   @override
   Widget build(BuildContext context) {
-    // 6. --- REMOVE THE 'Theme' WRAPPER ---
-    // This will make your landing page respect the app's theme
     return Scaffold(
       body: SingleChildScrollView(
         child: Column(
@@ -43,11 +38,8 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
   // Header Section
   Widget _buildHeader(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    // 7. Get the current theme and color for the icon
     final themeMode = ref.watch(themeProvider);
     final isDarkMode = themeMode == ThemeMode.dark;
-
-    // Use the theme's text color for the icon
     final iconColor = Theme.of(context).textTheme.bodyLarge?.color;
 
     return Container(
@@ -59,7 +51,7 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
             children: [
               _AnimatedHeartIcon(
                 isLiked: _isHeaderHeartLiked,
-                size: 24, // I noticed you changed this, good catch!
+                size: 24,
                 onTap: () {
                   setState(() {
                     _isHeaderHeartLiked = !_isHeaderHeartLiked;
@@ -70,26 +62,21 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
               Text('Suzy', style: textTheme.headlineMedium),
             ],
           ),
-          // 8. --- ADD A ROW FOR THE BUTTONS ---
           Row(
             children: [
-              // 9. --- THIS IS THE NEW BUTTON ---
               IconButton(
                 splashRadius: 20,
                 icon: Icon(
                   isDarkMode ? LucideIcons.sun : LucideIcons.moon,
-                  color: iconColor, // Use theme-aware color
+                  color: iconColor,
                 ),
                 onPressed: () {
-                  // Call the provider's method to toggle the theme
                   ref.read(themeProvider.notifier).toggleTheme();
                 },
               ),
               const SizedBox(width: 8),
               OutlinedButton(
-                // --- FIX: Added style for dark mode ---
                 style: OutlinedButton.styleFrom(
-                  // Use your theme colors to determine style
                   backgroundColor: isDarkMode ? AppColors.text_dark : null,
                   foregroundColor: isDarkMode
                       ? AppColors.background_dark
@@ -117,9 +104,9 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
       decoration: BoxDecoration(
-        color: colorScheme.surface.withAlpha(26), // 0.1
+        color: colorScheme.surface.withAlpha(26),
         border: Border(
-          top: BorderSide(color: colorScheme.secondary.withAlpha(51)), // 0.2
+          top: BorderSide(color: colorScheme.secondary.withAlpha(51)),
         ),
       ),
       child: Column(
@@ -144,17 +131,17 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
           Text(
             'Creating beautiful, inspiring study experiences for every learner.',
             style: textTheme.bodyMedium?.copyWith(
-              color: textTheme.bodyMedium?.color?.withAlpha(179), // 0.7
+              color: textTheme.bodyMedium?.color?.withAlpha(179),
             ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 32),
-          Divider(color: colorScheme.secondary.withAlpha(51)), // 0.2
+          Divider(color: colorScheme.secondary.withAlpha(51)),
           const SizedBox(height: 32),
           Text(
-            '© 2025 Suzy. Made with ❤️ for learners everywhere.',
+            '© 2025 Suzy. Made with heart for learners everywhere.',
             style: textTheme.bodySmall?.copyWith(
-              color: textTheme.bodySmall?.color?.withAlpha(179), // 0.7
+              color: textTheme.bodySmall?.color?.withAlpha(179),
             ),
             textAlign: TextAlign.center,
           ),
@@ -162,7 +149,7 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
           Text(
             'Developed by Ajay Anand, Mai Hazem, Haya Zaheer',
             style: textTheme.bodySmall?.copyWith(
-              color: textTheme.bodySmall?.color?.withAlpha(138), // 0.54
+              color: textTheme.bodySmall?.color?.withAlpha(138),
               fontSize: 12,
             ),
             textAlign: TextAlign.center,
@@ -172,7 +159,7 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
     );
   }
 
-  // --- Hero Section ---
+  // Hero Section
   Widget _buildHeroSection(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -205,7 +192,6 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
     );
   }
 
-  // Hero Section Image
   Widget _buildHeroImage(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
@@ -232,7 +218,7 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
               borderRadius: BorderRadius.circular(32),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.black.withAlpha(38), // 0.15
+                  color: AppColors.black.withAlpha(38),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
@@ -256,7 +242,6 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
     );
   }
 
-  // Hero Section Content
   Widget _buildHeroContent(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
@@ -287,7 +272,7 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
     );
   }
 
-  // Signup Card
+  // RESPONSIVE FIX: "Sign in here" button now wraps on mobile
   Widget _buildSignupCard(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
@@ -300,11 +285,9 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
         child: Container(
           padding: const EdgeInsets.all(40.0),
           decoration: BoxDecoration(
-            color: AppColors.white.withAlpha(26), // 0.1
+            color: AppColors.white.withAlpha(26),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: colorScheme.secondary.withAlpha(51),
-            ), // 0.2
+            border: Border.all(color: colorScheme.secondary.withAlpha(51)),
           ),
           child: Column(
             children: [
@@ -325,31 +308,51 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
                 child: const Text('Sign Up for Free'),
               ),
               const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text('Already have an account?'),
-                  TextButton(
-                    // --- FIX: Added style for dark mode ---
-                    style: TextButton.styleFrom(
-                      backgroundColor: isDarkMode ? AppColors.text_dark : null,
-                      foregroundColor: isDarkMode
-                          ? AppColors.background_dark
-                          : null,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                      ), // Added padding
-                    ),
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (ctx) => const LoginScreen(),
+
+              // RESPONSIVE: Wrap text + button to prevent overflow
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final bool isNarrow = constraints.maxWidth < 350;
+
+                  return Wrap(
+                    alignment: WrapAlignment.center,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text(
+                        'Already have an account?',
+                        style: textTheme.bodyMedium,
+                      ),
+                      if (!isNarrow) const SizedBox(width: 8),
+                      TextButton(
+                        style: TextButton.styleFrom(
+                          backgroundColor: isDarkMode
+                              ? AppColors.text_dark
+                              : null,
+                          foregroundColor: isDarkMode
+                              ? AppColors.background_dark
+                              : null,
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
                         ),
-                      );
-                    },
-                    child: const Text('Sign in here'),
-                  ),
-                ],
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (ctx) => const LoginScreen(),
+                            ),
+                          );
+                        },
+                        child: Text(
+                          'Sign in here',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: isDarkMode
+                                ? AppColors.background_dark
+                                : colorScheme.primary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
             ],
           ),
@@ -411,7 +414,7 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
       margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 64),
       decoration: BoxDecoration(
-        color: colorScheme.secondary.withAlpha(26), // 0.1
+        color: colorScheme.secondary.withAlpha(26),
         borderRadius: BorderRadius.circular(24),
       ),
       child: Column(
@@ -447,7 +450,6 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
 
 // Animated Heart Icon
 class _AnimatedHeartIcon extends StatelessWidget {
-  // ... (rest of your code) ...
   final bool isLiked;
   final VoidCallback onTap;
   final double size;
@@ -482,7 +484,6 @@ class _AnimatedHeartIcon extends StatelessWidget {
 
 // Feature Card
 class _FeatureCard extends StatelessWidget {
-  // ... (rest ofD:/kahrabha/flutter/suzy/lib/src/pages/auth/login_screen.dart of your code) ...
   final IconData icon;
   final String title;
   final String description;
@@ -502,9 +503,9 @@ class _FeatureCard extends StatelessWidget {
       padding: const EdgeInsets.all(32),
       constraints: const BoxConstraints(maxWidth: 350),
       decoration: BoxDecoration(
-        color: AppColors.white.withAlpha(20), // 0.08
+        color: AppColors.white.withAlpha(20),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colorScheme.secondary.withAlpha(51)), // 0.2
+        border: Border.all(color: colorScheme.secondary.withAlpha(51)),
       ),
       child: Column(
         children: [

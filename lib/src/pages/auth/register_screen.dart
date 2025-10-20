@@ -44,41 +44,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
       _isLoading = true;
     });
 
-    // --- Default error message ---
     String errorMessage = 'An unknown error occurred. Please try again.';
 
     try {
-      // --- Step 1: Create User ---
       UserCredential userCredential = await FirebaseAuth.instance
           .createUserWithEmailAndPassword(
             email: _emailController.text.trim(),
             password: _passwordController.text.trim(),
           );
 
-      // --- Step 2: Save User Data to Firestore ---
       await FirebaseFirestore.instance
           .collection('users')
           .doc(userCredential.user!.uid)
           .set({
             'username': _usernameController.text.trim(),
             'email': _emailController.text.trim(),
-            // Optional: Add createdAt timestamp
             'createdAt': Timestamp.now(),
           });
 
-      // --- Step 3: Navigate on Success ---
       if (mounted) {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (ctx) => const LoginScreen()),
         );
       }
-      // Explicitly return here on success before finally block
       return;
     } on FirebaseAuthException catch (e) {
-      // --- Handle Specific Firebase Auth Errors ---
-      debugPrint(
-        'FirebaseAuthException: ${e.code} - ${e.message}',
-      ); // Log the specific error code
+      debugPrint('FirebaseAuthException: ${e.code} - ${e.message}');
       if (e.code == 'weak-password') {
         errorMessage = 'The password provided is too weak.';
       } else if (e.code == 'email-already-in-use') {
@@ -86,34 +77,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
       } else if (e.code == 'invalid-email') {
         errorMessage = 'The email address is not valid.';
       } else if (e.code == 'operation-not-allowed') {
-        errorMessage =
-            'Email/password accounts are not enabled.'; // Check Firebase Console
+        errorMessage = 'Email/password accounts are not enabled.';
       } else {
-        errorMessage =
-            'Authentication error: ${e.message ?? e.code}'; // Show specific Auth error message
+        errorMessage = 'Authentication error: ${e.message ?? e.code}';
       }
     } on FirebaseException catch (e) {
-      // --- Handle Potential Firestore or other Firebase Errors ---
-      debugPrint(
-        'FirebaseException: ${e.code} - ${e.message}',
-      ); // Log the specific error code
-      errorMessage =
-          'Database error: ${e.message ?? e.code}'; // Show specific Firebase error message
-      // You might want specific messages for Firestore permission errors if needed
+      debugPrint('FirebaseException: ${e.code} - ${e.message}');
+      errorMessage = 'Database error: ${e.message ?? e.code}';
     } catch (e, stackTrace) {
-      // --- Catch ANY other unexpected errors ---
       debugPrint('Unexpected Error: $e');
-      debugPrint('Stack Trace: $stackTrace'); // Log stack trace for debugging
+      debugPrint('Stack Trace: $stackTrace');
       errorMessage = 'An unexpected error occurred. Please try again later.';
     } finally {
-      // --- This always runs, whether try succeeded or failed ---
       if (mounted) {
-        // Only show Snackbar if there was an error message set (i.e., not successful signup)
-        // Check if errorMessage is still the default (or changed)
-        // A better way: Check if signup was successful before showing error.
-        // We handle navigation on success inside try, so if we reach finally
-        // without navigating, it means an error occurred.
-        // Check if we are still on this screen
         if (ModalRoute.of(context)?.isCurrent ?? false) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -122,8 +98,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ),
           );
         }
-
-        // Always turn off loading indicator
         setState(() {
           _isLoading = false;
         });
@@ -139,7 +113,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // --- UPDATED: Get all colors and styles from the theme ---
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
     final colorScheme = theme.colorScheme;
@@ -192,21 +165,77 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
+  // -----------------------------------------------------------------
+  // RESPONSIVE FIELD WIDTH HELPERS
+  // -----------------------------------------------------------------
+  double _fieldWidth(BuildContext context, {bool isMobile = false}) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    return (isMobile || screenWidth < 600) ? double.infinity : 380.0;
+  }
+
+  Widget _responsiveField({
+    required BuildContext context,
+    required Widget child,
+    bool isMobile = false,
+  }) {
+    final width = _fieldWidth(context, isMobile: isMobile);
+    return width == double.infinity
+        ? child
+        : SizedBox(width: width, child: child);
+  }
+
+  // -----------------------------------------------------------------
+  // CENTERING HELPERS (Desktop Only)
+  // -----------------------------------------------------------------
+  Widget _buildCenteredField({
+    required bool shouldCenter,
+    required Widget child,
+  }) {
+    return shouldCenter ? Center(child: child) : child;
+  }
+
+  Widget _buildHeader(
+    TextTheme textTheme,
+    ColorScheme colorScheme,
+    Color mainTextColor,
+  ) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _AnimatedHeartIcon(
+          isLiked: _isLiked,
+          onTap: _toggleLike,
+          size: 32,
+          defaultColor: colorScheme.primary,
+          likedColor: AppColors.error,
+        ),
+        const SizedBox(width: 12),
+        Text(
+          "Suzy",
+          style: textTheme.headlineMedium?.copyWith(color: mainTextColor),
+        ),
+      ],
+    );
+  }
+
+  // -----------------------------------------------------------------
+  // FORM SECTION (Centered on Desktop)
+  // -----------------------------------------------------------------
   Widget _buildFormSection({
     required TextTheme textTheme,
     required ColorScheme colorScheme,
     required bool isDarkMode,
     bool isMobile = false,
   }) {
-    // Muted text color logic remains the same
     final Color mutedTextColor = isDarkMode
-        ? AppColors.white.withAlpha(179) // 70% white for dark mode
-        : AppColors.textSecondary_light; // Your specific light secondary color
+        ? AppColors.white.withAlpha(179)
+        : AppColors.textSecondary_light;
 
-    // Define the main text color explicitly
     final Color mainTextColor = isDarkMode
         ? AppColors.text_dark
         : AppColors.text_light;
+
+    final bool shouldCenterFields = !isMobile;
 
     return Container(
       constraints: const BoxConstraints(maxWidth: 550),
@@ -215,168 +244,226 @@ class _RegisterScreenState extends State<RegisterScreen> {
         key: _formKey,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(
-              children: [
-                _AnimatedHeartIcon(
-                  isLiked: _isLiked,
-                  onTap: _toggleLike,
-                  size: 32,
-                  defaultColor: colorScheme.primary,
-                  likedColor: AppColors.error,
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  "Suzy",
-                  style: textTheme.headlineMedium?.copyWith(
-                    color: mainTextColor,
-                  ),
-                ),
-              ],
+            // Logo + App Name
+            _buildCenteredField(
+              shouldCenter: shouldCenterFields,
+              child: _buildHeader(textTheme, colorScheme, mainTextColor),
             ),
             SizedBox(height: isMobile ? 16 : 32),
-            Text(
-              "Create an Account",
-              style:
-                  (isMobile
-                          ? textTheme.headlineMedium
-                          : textTheme.headlineLarge)
-                      ?.copyWith(color: mainTextColor),
+
+            // Title
+            _buildCenteredField(
+              shouldCenter: shouldCenterFields,
+              child: Text(
+                "Create an Account",
+                style:
+                    (isMobile
+                            ? textTheme.headlineMedium
+                            : textTheme.headlineLarge)
+                        ?.copyWith(color: mainTextColor),
+                textAlign: shouldCenterFields
+                    ? TextAlign.center
+                    : TextAlign.start,
+              ),
             ),
             const SizedBox(height: 8),
-            Text(
-              "Join our community to start your aesthetic study journey.",
-              style: textTheme.bodyLarge?.copyWith(
-                color: isDarkMode ? mutedTextColor : mainTextColor,
+
+            // Subtitle
+            _buildCenteredField(
+              shouldCenter: shouldCenterFields,
+              child: Text(
+                "Join our community to start your aesthetic study journey.",
+                style: textTheme.bodyLarge?.copyWith(
+                  color: isDarkMode ? mutedTextColor : mainTextColor,
+                ),
+                textAlign: shouldCenterFields
+                    ? TextAlign.center
+                    : TextAlign.start,
               ),
             ),
             const SizedBox(height: 32),
-            _buildTextFormField(
-              controller: _usernameController,
-              labelText: 'Username',
-              validator: (value) {
-                if (value == null || value.trim().length < 3) {
-                  return 'Username must be at least 3 characters.';
-                }
-                return null;
-              },
-              textTheme: textTheme,
-              colorScheme: colorScheme,
-              mutedTextColor: mutedTextColor,
-              isDarkMode: isDarkMode, // Pass down theme mode
-            ),
-            const SizedBox(height: 24),
-            _buildTextFormField(
-              controller: _emailController,
-              labelText: 'Email Address',
-              keyboardType: TextInputType.emailAddress,
-              validator: (value) {
-                if (value == null || !value.contains('@')) {
-                  return 'Please enter a valid email.';
-                }
-                return null;
-              },
-              textTheme: textTheme,
-              colorScheme: colorScheme,
-              mutedTextColor: mutedTextColor,
-              isDarkMode: isDarkMode, // Pass down theme mode
-            ),
-            const SizedBox(height: 24),
-            _buildTextFormField(
-              controller: _passwordController,
-              labelText: 'Password',
-              obscureText: !_isPasswordVisible,
-              suffixIcon: IconButton(
-                icon: Icon(
-                  _isPasswordVisible ? Icons.visibility_off : Icons.visibility,
-                  color: mutedTextColor,
+
+            // Username Field
+            _buildCenteredField(
+              shouldCenter: shouldCenterFields,
+              child: _responsiveField(
+                context: context,
+                isMobile: isMobile,
+                child: _buildTextFormField(
+                  controller: _usernameController,
+                  labelText: 'Username',
+                  validator: (value) {
+                    if (value == null || value.trim().length < 3) {
+                      return 'Username must be at least 3 characters.';
+                    }
+                    return null;
+                  },
+                  textTheme: textTheme,
+                  colorScheme: colorScheme,
+                  mutedTextColor: mutedTextColor,
+                  isDarkMode: isDarkMode,
                 ),
-                onPressed: () =>
-                    setState(() => _isPasswordVisible = !_isPasswordVisible),
-              ),
-              validator: (value) {
-                if (value == null || value.trim().length < 6) {
-                  return 'Password must be at least 6 characters.';
-                }
-                return null;
-              },
-              textTheme: textTheme,
-              colorScheme: colorScheme,
-              mutedTextColor: mutedTextColor,
-              isDarkMode: isDarkMode, // Pass down theme mode
-            ),
-            const SizedBox(height: 24),
-            _buildTextFormField(
-              controller: _confirmPasswordController,
-              labelText: 'Confirm Password',
-              obscureText: true,
-              validator: (value) {
-                if (value != _passwordController.text) {
-                  return 'Passwords do not match.';
-                }
-                return null;
-              },
-              textTheme: textTheme,
-              colorScheme: colorScheme,
-              mutedTextColor: mutedTextColor,
-              isDarkMode: isDarkMode, // Pass down theme mode
-            ),
-            const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _signup,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: colorScheme.secondary,
-                  foregroundColor: colorScheme.onSecondary,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: _isLoading
-                    ? SizedBox(
-                        height: 24,
-                        width: 24,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            isDarkMode ? AppColors.black : AppColors.white,
-                          ),
-                        ),
-                      )
-                    : Text(
-                        'Create Account',
-                        style: textTheme.labelLarge?.copyWith(
-                          color: colorScheme.onSecondary,
-                        ),
-                      ),
               ),
             ),
             const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  "Already have an account?",
-                  style: textTheme.bodyMedium?.copyWith(
-                    color: isDarkMode ? mutedTextColor : mainTextColor,
-                  ),
+
+            // Email Field
+            _buildCenteredField(
+              shouldCenter: shouldCenterFields,
+              child: _responsiveField(
+                context: context,
+                isMobile: isMobile,
+                child: _buildTextFormField(
+                  controller: _emailController,
+                  labelText: 'Email Address',
+                  keyboardType: TextInputType.emailAddress,
+                  validator: (value) {
+                    if (value == null || !value.contains('@')) {
+                      return 'Please enter a valid email.';
+                    }
+                    return null;
+                  },
+                  textTheme: textTheme,
+                  colorScheme: colorScheme,
+                  mutedTextColor: mutedTextColor,
+                  isDarkMode: isDarkMode,
                 ),
-                TextButton(
-                  onPressed: () => Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(builder: (ctx) => const LoginScreen()),
-                  ),
-                  child: Text(
-                    'Login here',
-                    style: textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.primary,
-                      fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Password Field
+            _buildCenteredField(
+              shouldCenter: shouldCenterFields,
+              child: _responsiveField(
+                context: context,
+                isMobile: isMobile,
+                child: _buildTextFormField(
+                  controller: _passwordController,
+                  labelText: 'Password',
+                  obscureText: !_isPasswordVisible,
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _isPasswordVisible
+                          ? Icons.visibility_off
+                          : Icons.visibility,
+                      color: mutedTextColor,
+                    ),
+                    onPressed: () => setState(
+                      () => _isPasswordVisible = !_isPasswordVisible,
                     ),
                   ),
+                  validator: (value) {
+                    if (value == null || value.trim().length < 6) {
+                      return 'Password must be at least 6 characters.';
+                    }
+                    return null;
+                  },
+                  textTheme: textTheme,
+                  colorScheme: colorScheme,
+                  mutedTextColor: mutedTextColor,
+                  isDarkMode: isDarkMode,
                 ),
-              ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Confirm Password Field
+            _buildCenteredField(
+              shouldCenter: shouldCenterFields,
+              child: _responsiveField(
+                context: context,
+                isMobile: isMobile,
+                child: _buildTextFormField(
+                  controller: _confirmPasswordController,
+                  labelText: 'Confirm Password',
+                  obscureText: true,
+                  validator: (value) {
+                    if (value != _passwordController.text) {
+                      return 'Passwords do not match.';
+                    }
+                    return null;
+                  },
+                  textTheme: textTheme,
+                  colorScheme: colorScheme,
+                  mutedTextColor: mutedTextColor,
+                  isDarkMode: isDarkMode,
+                ),
+              ),
+            ),
+            const SizedBox(height: 32),
+
+            // Create Account Button
+            _buildCenteredField(
+              shouldCenter: shouldCenterFields,
+              child: _responsiveField(
+                context: context,
+                isMobile: isMobile,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _signup,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: colorScheme.secondary,
+                    foregroundColor: colorScheme.onSecondary,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: _isLoading
+                      ? SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              isDarkMode ? AppColors.black : AppColors.white,
+                            ),
+                          ),
+                        )
+                      : Text(
+                          'Create Account',
+                          style: textTheme.labelLarge?.copyWith(
+                            color: colorScheme.onSecondary,
+                          ),
+                        ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Login Link
+            _buildCenteredField(
+              shouldCenter: shouldCenterFields,
+              child: Row(
+                mainAxisSize: shouldCenterFields
+                    ? MainAxisSize.min
+                    : MainAxisSize.max,
+                mainAxisAlignment: shouldCenterFields
+                    ? MainAxisAlignment.center
+                    : MainAxisAlignment.center,
+                children: [
+                  Text(
+                    "Already have an account?",
+                    style: textTheme.bodyMedium?.copyWith(
+                      color: isDarkMode ? mutedTextColor : mainTextColor,
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(builder: (ctx) => const LoginScreen()),
+                    ),
+                    child: Text(
+                      'Login here',
+                      style: textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -384,7 +471,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  // --- Updated _buildTextFormField ---
+  // --- TextFormField Builder ---
   TextFormField _buildTextFormField({
     required TextEditingController controller,
     required String labelText,
@@ -392,7 +479,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     required TextTheme textTheme,
     required ColorScheme colorScheme,
     required Color mutedTextColor,
-    required bool isDarkMode, // Added this
+    required bool isDarkMode,
     bool obscureText = false,
     TextInputType? keyboardType,
     Widget? suffixIcon,
@@ -401,8 +488,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       controller: controller,
       obscureText: obscureText,
       keyboardType: keyboardType,
-      // --- THIS IS THE FIX ---
-      // Use a conditional color for the typed text
       style: textTheme.bodyLarge?.copyWith(
         color: isDarkMode ? AppColors.text_dark : AppColors.textSecondary_light,
       ),
@@ -433,6 +518,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
+  // --- Illustration Section ---
   Widget _buildIllustrationSection({
     required ColorScheme colorScheme,
     bool isMobile = false,
@@ -490,7 +576,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 }
 
-// Reusable Heart Icon Widget
+// Reusable Animated Heart Icon
 class _AnimatedHeartIcon extends StatelessWidget {
   final bool isLiked;
   final VoidCallback onTap;
