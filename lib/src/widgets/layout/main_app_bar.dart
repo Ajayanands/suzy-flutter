@@ -1,8 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_flutter/lucide_flutter.dart';
-
-// Import your custom colors if needed for specific overrides,
-// otherwise rely on Theme.of(context)
 import 'package:suzy/src/core/theme/colors.dart';
 
 class AppSidebar extends StatelessWidget {
@@ -21,27 +18,21 @@ class AppSidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // --- UPDATED: Use theme colors ---
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    // Use a subtle divider color
-    final dividerColor = colorScheme.onSurface.withAlpha(51); // ~20% opacity
+    final dividerColor = colorScheme.onSurface.withAlpha(51);
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       width: isCollapsed ? 80 : 250,
       decoration: BoxDecoration(
-        // Use surface color for the background
         color: colorScheme.surface,
         border: Border(right: BorderSide(color: dividerColor, width: 1)),
       ),
       child: Column(
         children: [
           _buildHeader(context),
-          Divider(
-            height: 1,
-            color: dividerColor,
-          ), // Use the defined divider color
+          Divider(height: 1, color: dividerColor),
           Expanded(child: _buildNavMenu()),
         ],
       ),
@@ -49,26 +40,21 @@ class AppSidebar extends StatelessWidget {
   }
 
   Widget _buildHeader(BuildContext context) {
-    // --- UPDATED: Use theme colors ---
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
     final colorScheme = theme.colorScheme;
-    // Color for the title text
     final titleColor = textTheme.headlineMedium?.color ?? colorScheme.onSurface;
-    // Color for the toggle icon
     final iconColor = colorScheme.onSurface;
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 24),
-      height: 120, // Keep height consistent
+      height: 120,
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // Logo and Title (only visible when expanded)
           AnimatedOpacity(
             duration: const Duration(milliseconds: 300),
             opacity: isCollapsed ? 0 : 1,
-            // Use IgnorePointer to prevent interaction when hidden
             child: IgnorePointer(
               ignoring: isCollapsed,
               child: Row(
@@ -83,23 +69,21 @@ class AppSidebar extends StatelessWidget {
                   Text(
                     "Suzy",
                     style: textTheme.headlineMedium?.copyWith(
-                      color: titleColor, // Use theme text color
+                      color: titleColor,
                     ),
-                    overflow: TextOverflow.ellipsis, // Prevent overflow
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
             ),
           ),
-          // Toggle Button (always visible)
           Positioned(
-            // Adjust position slightly for better centering when collapsed
             top: isCollapsed ? null : 5,
             right: isCollapsed ? null : 10,
             child: IconButton(
               icon: Icon(
                 isCollapsed ? LucideIcons.chevronRight : LucideIcons.menu,
-                color: iconColor, // Use theme icon color
+                color: iconColor,
               ),
               onPressed: onToggle,
               tooltip: isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar',
@@ -111,7 +95,6 @@ class AppSidebar extends StatelessWidget {
   }
 
   Widget _buildNavMenu() {
-    // Keep your menu data structure
     final menuData = [
       {'icon': LucideIcons.layoutDashboard, 'title': 'Dashboard'},
       {'icon': LucideIcons.upload, 'title': 'Upload Notes'},
@@ -132,7 +115,7 @@ class AppSidebar extends StatelessWidget {
       itemBuilder: (context, index) {
         final item = menuData[index];
         return _SidebarMenuItem(
-          key: ValueKey(index), // Use index for stable key
+          key: ValueKey(index),
           icon: item['icon'] as IconData,
           title: item['title'] as String,
           isSelected: selectedIndex == index,
@@ -152,7 +135,7 @@ class _SidebarMenuItem extends StatelessWidget {
   final VoidCallback onTap;
 
   const _SidebarMenuItem({
-    super.key, // Use super(key: key)
+    super.key,
     required this.icon,
     required this.title,
     required this.isSelected,
@@ -162,21 +145,30 @@ class _SidebarMenuItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // --- UPDATED: Use theme colors ---
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isDarkMode = theme.brightness == Brightness.dark;
 
-    // Determine colors based on selection and theme
-    final Color iconTextColor = isSelected
-        ? colorScheme
-              .primary // Selected uses primary color
-        : isDarkMode
-        ? AppColors.white.withAlpha(179) // Dark mode muted
-        : AppColors.textSecondary_light; // Light mode muted
+    // --- THIS IS THE FIX ---
+    // Define the selection color with a special case for dark mode.
+    final Color selectionColor;
+    if (isSelected) {
+      selectionColor = isDarkMode
+          ? AppColors
+                .icon_light // Use the light mode's green in dark mode
+          : colorScheme.primary; // Use the default primary color in light mode
+    } else {
+      // Logic for unselected items remains the same
+      selectionColor = isDarkMode
+          ? AppColors.white.withAlpha(179) // Dark mode muted
+          : AppColors.textSecondary_light; // Light mode muted
+    }
 
+    // --- UPDATED: The background color now uses the selectionColor logic ---
     final Color backgroundColor = isSelected
-        ? colorScheme.primary.withAlpha(25) // ~10% opacity primary
+        ? selectionColor.withAlpha(
+            25,
+          ) // ~10% opacity of the correct selection color
         : Colors.transparent;
 
     return Container(
@@ -187,29 +179,29 @@ class _SidebarMenuItem extends StatelessWidget {
       ),
       child: Tooltip(
         message: isCollapsed ? title : '',
-        waitDuration: const Duration(milliseconds: 300), // Delay tooltip
+        waitDuration: const Duration(milliseconds: 300),
         child: ListTile(
           onTap: onTap,
-          leading: Icon(icon, color: iconTextColor, size: 22),
+          // --- UPDATED: Use the new 'selectionColor' for both icon and text ---
+          leading: Icon(icon, color: selectionColor, size: 22),
           title: isCollapsed
               ? null
               : Text(
                   title,
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    // Use a base style
-                    color: iconTextColor,
+                    color: selectionColor,
                     fontWeight: isSelected
                         ? FontWeight.bold
                         : FontWeight.normal,
                   ),
-                  overflow: TextOverflow.ellipsis, // Prevent text wrapping
+                  overflow: TextOverflow.ellipsis,
                   maxLines: 1,
                 ),
-          dense: true, // Make items slightly smaller vertically
+          dense: true,
           contentPadding: isCollapsed
               ? const EdgeInsets.symmetric(
-                  horizontal: 16,
-                ) // Center icon when collapsed
+                  horizontal: 24, // Center icon better when collapsed
+                )
               : const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         ),
       ),

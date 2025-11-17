@@ -40,11 +40,14 @@ dependencies:
   firebase_storage: ^13.0.3
   lucide_flutter: ^0.546.0
   flutter_riverpod: ^3.0.3
+  file_picker: ^8.1.2
+  dotted_border: ^3.1.0
+  lottie: ^3.3.2
+  rive: ^0.12.4
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-firebase_core: ^3.6.0 
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -64,6 +67,8 @@ flutter:
     - assets/images/
     - assets/fonts/
     - assets/slm_models/
+    - assets/animations/technology.json
+    - assets/animations/confetti.json
 
   # This is the new section you need to add.
   fonts:
