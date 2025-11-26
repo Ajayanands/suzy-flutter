@@ -1,7 +1,9 @@
+// lib/src/pages/landing/landing_screen.dart
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_flutter/lucide_flutter.dart';
+import 'package:video_player/video_player.dart';
 import 'package:suzy/src/pages/auth/login_screen.dart';
 import 'package:suzy/src/pages/auth/register_screen.dart';
 import 'package:suzy/src/core/theme/colors.dart';
@@ -346,7 +348,7 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
                             fontWeight: FontWeight.bold,
                             color: isDarkMode
                                 ? AppColors.background_dark
-                                : colorScheme.primary,
+                                : Theme.of(context).colorScheme.primary,
                           ),
                         ),
                       ),
@@ -410,40 +412,98 @@ class _LandingScreenState extends ConsumerState<LandingScreen> {
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 64),
-      decoration: BoxDecoration(
-        color: colorScheme.secondary.withAlpha(26),
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Column(
-        children: [
-          Text(
-            'Ready to Fall in Love with Studying?',
-            textAlign: TextAlign.center,
-            style: textTheme.headlineMedium?.copyWith(fontSize: 40),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'Join Suzy today and discover how beautiful, organized study spaces can transform your learning experience.',
-            textAlign: TextAlign.center,
-            style: textTheme.bodyMedium?.copyWith(fontSize: 20),
-          ),
-          const SizedBox(height: 32),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+    // Use LayoutBuilder to show video background only on desktop screens (same threshold used earlier)
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final bool isDesktop = constraints.maxWidth > 1024;
+
+        if (isDesktop) {
+          // Desktop: CTA with video background
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+            child: _CtaVideoBackground(
+              videoAsset: 'assets/videos/suzy_intro.mp4',
+              borderRadius: 24,
+              // tweak this to make video darker/lighter (0.0 = fully transparent, 0.8 = mostly opaque)
+              videoOverlayOpacity: 0.45,
+              child: Column(
+                children: [
+                  Text(
+                    'Ready to Fall in Love with Studying?',
+                    textAlign: TextAlign.center,
+                    style: textTheme.headlineMedium?.copyWith(fontSize: 40),
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Join Suzy today and discover how beautiful, organized study spaces can transform your learning experience.',
+                    textAlign: TextAlign.center,
+                    style: textTheme.bodyMedium?.copyWith(fontSize: 20),
+                  ),
+                  const SizedBox(height: 32),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 32,
+                        vertical: 24,
+                      ),
+                    ),
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (ctx) => const RegisterScreen(),
+                        ),
+                      );
+                    },
+                    child: const Text('Start Studying Today'),
+                  ),
+                ],
+              ),
             ),
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (ctx) => const RegisterScreen()),
-              );
-            },
-            child: const Text('Start Studying Today'),
-          ),
-        ],
-      ),
+          );
+        } else {
+          // Mobile / Tablet: keep the old static design
+          return Container(
+            margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 64),
+            decoration: BoxDecoration(
+              color: colorScheme.secondary.withAlpha(26),
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Column(
+              children: [
+                Text(
+                  'Ready to Fall in Love with Studying?',
+                  textAlign: TextAlign.center,
+                  style: textTheme.headlineMedium?.copyWith(fontSize: 40),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Join Suzy today and discover how beautiful, organized study spaces can transform your learning experience.',
+                  textAlign: TextAlign.center,
+                  style: textTheme.bodyMedium?.copyWith(fontSize: 20),
+                ),
+                const SizedBox(height: 32),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 32,
+                      vertical: 24,
+                    ),
+                  ),
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (ctx) => const RegisterScreen(),
+                      ),
+                    );
+                  },
+                  child: const Text('Start Studying Today'),
+                ),
+              ],
+            ),
+          );
+        }
+      },
     );
   }
 }
@@ -517,6 +577,129 @@ class _FeatureCard extends StatelessWidget {
             description,
             textAlign: TextAlign.center,
             style: textTheme.bodyMedium,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// CTA video background widget
+class _CtaVideoBackground extends StatefulWidget {
+  final String videoAsset;
+  final Widget child;
+  final double videoOverlayOpacity;
+  final double borderRadius;
+
+  const _CtaVideoBackground({
+    required this.videoAsset,
+    required this.child,
+    this.videoOverlayOpacity = 0.5,
+    this.borderRadius = 16.0,
+  });
+
+  @override
+  State<_CtaVideoBackground> createState() => _CtaVideoBackgroundState();
+}
+
+class _CtaVideoBackgroundState extends State<_CtaVideoBackground> {
+  late VideoPlayerController _controller;
+  bool _initialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _controller = VideoPlayerController.asset(widget.videoAsset)
+      ..initialize().then((_) {
+        // mute and loop
+        _controller.setVolume(0.0);
+        _controller.setLooping(true);
+        _controller.play();
+        if (mounted) {
+          setState(() {
+            _initialized = true;
+          });
+        }
+      });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  // Builds the video in a cover-fashion to fill the container
+  Widget _buildCoverVideo(BuildContext context) {
+    if (!_initialized || !_controller.value.isInitialized) {
+      return Container(color: Colors.black12);
+    }
+
+    // Use FittedBox + SizedBox trick for cover
+    final size = _controller.value.size;
+    final video = SizedBox(
+      width: size.width,
+      height: size.height,
+      child: VideoPlayer(_controller),
+    );
+
+    return FittedBox(
+      fit: BoxFit.cover,
+      clipBehavior: Clip.hardEdge,
+      child: video,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // The CTA card padding & constraints come from the caller's child widget.
+    // We'll wrap the child with a Stack where the video fills behind it.
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(widget.borderRadius),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // Video background (fills the whole area)
+          Positioned.fill(child: _buildCoverVideo(context)),
+
+          // Overlay to darken the video for readability
+          Positioned.fill(
+            child: Container(
+              color: Colors.black.withOpacity(widget.videoOverlayOpacity),
+            ),
+          ),
+
+          // Foreground: the caller's CTA content inside padded container so
+          // it preserves the earlier spacing.
+          Positioned.fill(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 64),
+              child: Center(
+                child: DefaultTextStyle(
+                  style:
+                      Theme.of(context).textTheme.bodyMedium ??
+                      const TextStyle(color: Colors.white),
+                  child: widget.child,
+                ),
+              ),
+            ),
+          ),
+
+          // Optional: small subtle border
+          Positioned.fill(
+            child: IgnorePointer(
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(widget.borderRadius),
+                  border: Border.all(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.secondary.withAlpha(40),
+                  ),
+                ),
+              ),
+            ),
           ),
         ],
       ),

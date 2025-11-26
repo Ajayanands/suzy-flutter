@@ -44,6 +44,8 @@ dependencies:
   dotted_border: ^3.1.0
   lottie: ^3.3.2
   rive: ^0.12.4
+  video_player: ^2.10.1 
+
 
 dev_dependencies:
   flutter_test:
@@ -66,9 +68,14 @@ flutter:
   assets:
     - assets/images/
     - assets/fonts/
+    - assets/animations/
+    - assets/videos/
     - assets/slm_models/
     - assets/animations/technology.json
     - assets/animations/confetti.json
+    - assets/animations/Suzy_intro.json
+    - assets/videos/suzy_intro.mp4
+    - assets/videos/suzy_intro1.mp4
 
   # This is the new section you need to add.
   fonts:
